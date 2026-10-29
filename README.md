@@ -1,49 +1,72 @@
-# super simple Vector DB for similarity search
+# Java Vector Search
 
+A simple, educational Java implementation of vector similarity search.
 
-Not suitable for real use. Not optimized. Built for learning.
+> ⚠️ **Not intended for production use.** This project prioritizes learning and clarity over performance and optimization.
 
 ## What it does
 
-Insert vectors with an ID and metadata. Query with a vector and get back the
-K closest matches. Cosine and Euclidean distances are supported.
+Stores vectors with an ID and metadata, then retrieves the **K nearest matches** for a query vector. Supports cosine distance and Euclidean distance.
 
 ## How it works
 
-Inserts go into an in-memory store. When it fills up, the contents are written
-to a memory-mapped file on disk via a temp file and atomic rename. Search runs
-across all stores in parallel using virtual threads, collects each store's
-top-K, then merges them into a final top-K.
+Vectors are initially stored in memory. When the in-memory store reaches capacity, its contents are flushed to a memory-mapped file on disk using a temporary file and atomic rename.
 
-Duplicate IDs are rejected. On restart, existing segment files are reloaded
-and their dimensions are validated against the engine's configured dimensions.
+Search runs across all stores in parallel using Java virtual threads. Each store returns its local top-K results, which are then merged to produce the final top-K matches.
+
+Duplicate IDs are rejected. On restart, existing segment files are reloaded, and their vector dimensions are validated against the engine's configured dimensions.
 
 ## Project layout
 
-    vdb/
-      Engine.java           insert, search, close
-      model/
-        Doc.java            id + vector + metadata
-        Result.java         id + distance + metadata
-      metric/
-        Metric.java         distance interface
-        Cosine.java         1 - cosine similarity
-        Euclidean.java      L2 distance
-      store/
-        Store.java          common interface
-        MemStore.java       in-RAM store with read/write lock
-        DiskStore.java      memory-mapped file store (read-only)
-        Flusher.java        writes docs to a .seg file (temp + rename)
+```text
+java-vector-search/
+└── src/main/java/
+    └── vdb/
+        ├── Engine.java          # insert, search, close
+        ├── model/
+        │   ├── Doc.java         # ID, vector, and metadata
+        │   └── Result.java      # ID, distance, and metadata
+        ├── metric/
+        │   ├── Metric.java      # distance metric interface
+        │   ├── Cosine.java      # 1 - cosine similarity
+        │   └── Euclidean.java   # Euclidean (L2) distance
+        └── store/
+            ├── Store.java       # common store interface
+            ├── MemStore.java    # in-memory store with read/write lock
+            ├── DiskStore.java   # read-only memory-mapped file store
+            └── Flusher.java     # writes .seg files using temp + rename
+```
 
-## Build
+## Requirements
 
-    mvn clean test
+- JDK 21 or later
+- Maven 3.6 or later
 
-Requires JDK 21+ and Maven 3.6+.
+## Build and test
+
+Run the test suite with:
+
+```bash
+mvn clean test
+```
 
 ## File format
 
-Each .seg file is binary:
+Each `.seg` file uses a binary format:
 
-    [dims:int][count:int]
-    per doc: [idLen:int][id:bytes][vector:float x dims][metaLen:int][meta:bytes]
+```text
+[dims:int][count:int]
+
+For each document:
+[idLen:int]
+[id:bytes]
+[vector:float × dims]
+[metaLen:int]
+[meta:bytes]
+```
+
+The header stores the vector dimensions and document count. Each document contains its ID, vector values, and metadata.
+
+---
+
+**Educational project** — provided as-is, without warranty. Built to explore vector similarity search, in-memory storage, disk-backed segments, and parallel search in Java.
